@@ -3,15 +3,14 @@ package net.runelite.client.plugins.slayernavigator;
 import com.google.inject.Provides;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.ChatMessageType;
-import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.Skill;
+import net.runelite.api.*;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+
+import java.util.Arrays;
 
 @Slf4j
 @PluginDescriptor(
@@ -43,6 +42,7 @@ public class SlayerNavigatorPlugin extends Plugin
 		if (gameStateChanged.getGameState() == GameState.LOGGED_IN)
 		{
 			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Example says " + config.showSkipAdvice(), null);
+			log.debug(Arrays.toString(getSkillStatistics(Skill.SLAYER)));
 		}
 	}
 
@@ -52,22 +52,23 @@ public class SlayerNavigatorPlugin extends Plugin
 		return configManager.getConfig(SlayerNavigatorConfig.class);
 	}
 
-	public int[] getSkillStatistics(Skill skill){
+	private int[] getSkillStatistics(Skill skill){
 		// get level
+
 //		https://static.runelite.net/api/runelite-api/net/runelite/api/Client.html#getRealSkillLevel(net.runelite.api.Skill)
 //		parameter: https://static.runelite.net/api/runelite-api/net/runelite/api/Skill.html#SLAYER
 
 		// get XP
-
 //		https://static.runelite.net/api/runelite-api/net/runelite/api/Client.html#getSkillExperience(net.runelite.api.Skill)
 //		parameter: https://static.runelite.net/api/runelite-api/net/runelite/api/Skill.html#SLAYER
 
-		return new int[] {0, 0}; // {level, XP}
+		return new int[] {client.getRealSkillLevel(skill), client.getSkillExperience(skill)}; // {level, XP}
 
 	}
 
 	public void showBestGear(){
 		// Get bank inventory
+		Item[] items = getBankItems();
 //		https://static.runelite.net/api/runelite-api/net/runelite/api/InventoryID.html#BANK
 //		https://static.runelite.net/api/runelite-api/net/runelite/api/ItemContainer.html#getItems()
 
@@ -75,6 +76,18 @@ public class SlayerNavigatorPlugin extends Plugin
 
 		// query corresponding database, and check against bank.
 		// mark per category (i.e. helmet, legs) the top choice in your bank (if your bank is open). Also display list of best items to wear
+	}
+
+	private Item[] getBankItems() {
+		ItemContainer bankContents = client.getItemContainer(InventoryID.BANK);
+		if (bankContents != null){
+			return bankContents.getItems();
+		}
+		else {
+			log.error("Error when getting bank items");
+			return null;
+		}
+
 	}
 
 	public void navigateToMonster(String monster){
@@ -119,4 +132,9 @@ public class SlayerNavigatorPlugin extends Plugin
 		}
 		;
 	}
+
+
 }
+
+
+
