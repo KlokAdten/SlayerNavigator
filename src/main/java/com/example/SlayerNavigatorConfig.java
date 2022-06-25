@@ -29,14 +29,16 @@ public interface SlayerNavigatorConfig extends Config
 		return true;
 	}
 
-//	@ConfigItem(
-//			keyName = "selectCombatMethod",
-//			name = "Select combat method",
-//			description = "Select your preferred combat method. Locations will be filtered whether your preferred method is avilable for that location.",
-//			position = 3
-//	)
-//	default enum selectCombatMethod()
-//	{
-//		return SlayerNavigatorCombatMethods;
-//	}
+	@ConfigItem(
+			keyName = "selectCombatMethod",
+			name = "Combat method",
+			description = "Select your preferred combat method. Locations will be filtered whether your preferred method is avilable for that location.",
+			position = 3
+	)
+	default SlayerNavigatorCombatMethods selectCombatMethod()
+	{
+		return SlayerNavigatorCombatMethods.MELEE_DEFENCE;
+	}
+
+
 }
