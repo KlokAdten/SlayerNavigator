@@ -5,8 +5,10 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
@@ -24,16 +26,19 @@ public class SlayerNavigatorPlugin extends Plugin
 	@Inject
 	private SlayerNavigatorConfig config;
 
+	@Inject
+	private ItemManager itemManager;
+
 	@Override
 	protected void startUp() throws Exception
 	{
-		log.info("Example started!");
+		log.info("SlayerNavigator started!");
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
-		log.info("Example stopped!");
+		log.info("SlayerNavigator stopped!");
 	}
 
 	@Subscribe
@@ -41,7 +46,7 @@ public class SlayerNavigatorPlugin extends Plugin
 	{
 		if (gameStateChanged.getGameState() == GameState.LOGGED_IN)
 		{
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Example says " + config.showSkipAdvice(), null);
+//			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Example says " + config.showSkipAdvice(), null);
 			log.debug(Arrays.toString(getSkillStatistics(Skill.SLAYER)));
 		}
 	}
@@ -50,6 +55,33 @@ public class SlayerNavigatorPlugin extends Plugin
 	SlayerNavigatorConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(SlayerNavigatorConfig.class);
+	}
+
+	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged ev)
+	{
+		if (ev.getContainerId() == InventoryID.BANK.getId())
+		{
+			Item[] bankItems = getBankItems();
+			log.info(Arrays.toString(bankItems));
+			// now, mark them
+			for (Item i : bankItems){
+				if (i.getId() == 2355){
+//					SpritePixels pixels = client.createItemSprite(i.getId(), 1, true, 1, 0, false, 1);
+//					pixels.drawAt();
+//					client.getItemSpriteCache();
+					log.info("We are at a silver bar. Should draw");
+				}
+			}
+
+
+//			https://static.runelite.net/api/runelite-api/net/runelite/api/SpritePixels.html#drawAt(int,int)
+		}
+	}
+
+	private void tagSlayerTaskMonster(){
+//		https://static.runelite.net/api/runelite-api/net/runelite/api/Actor.html#getConvexHull()
+//		https://static.runelite.net/api/runelite-api/net/runelite/api/model/Jarvis.html
 	}
 
 	private int[] getSkillStatistics(Skill skill){
@@ -79,12 +111,13 @@ public class SlayerNavigatorPlugin extends Plugin
 	}
 
 	private Item[] getBankItems() {
+		// Only works if the bank is currently open. Should be called when opening bank
 		ItemContainer bankContents = client.getItemContainer(InventoryID.BANK);
 		if (bankContents != null){
 			return bankContents.getItems();
 		}
 		else {
-			log.error("Error when getting bank items");
+			log.error("Bank is unopened");
 			return null;
 		}
 
