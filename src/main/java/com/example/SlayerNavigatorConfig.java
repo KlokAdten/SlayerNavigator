@@ -4,6 +4,8 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
+import java.awt.*;
+
 @ConfigGroup("Slayer Navigator")
 public interface SlayerNavigatorConfig extends Config
 {
@@ -40,5 +42,35 @@ public interface SlayerNavigatorConfig extends Config
 		return SlayerNavigatorCombatMethods.MELEE_DEFENCE;
 	}
 
+	@ConfigItem(
+			keyName = "showTag",
+			name = "Show tag",
+			description = "Shows Slayer monster tag",
+			position = 4
+	)
+	default boolean showTag() {
+		return true;
+	}
+
+
+	@ConfigItem(
+			keyName = "selectTagColor",
+			name = "Tag color",
+			description = "Color your Slayer monster will be tagged with",
+			position = 5
+	)
+	default Color selectTagColor() {
+		return Color.CYAN;
+	}
+
+	@ConfigItem(
+			keyName = "showAllTimeInfo",
+			name = "Show info",
+			description = "Shows your all-time statistics when this plugin was used",
+			position = 5
+	)
+	default boolean showAllTimeInfo() {
+		return false;
+	}
 
 }

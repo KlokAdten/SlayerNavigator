@@ -6,13 +6,26 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.events.NpcDespawned;
+import net.runelite.api.events.NpcSpawned;
+import net.runelite.client.chat.ChatClient;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.npcoverlay.HighlightedNpc;
+import net.runelite.client.game.npcoverlay.NpcOverlayService;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.util.ColorUtil;
+import net.runelite.http.api.chat.Task;
 
+import java.awt.*;
+import java.io.IOException;
+
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.function.Function;
 
 @Slf4j
 @PluginDescriptor(
@@ -24,21 +37,100 @@ public class SlayerNavigatorPlugin extends Plugin
 	private Client client;
 
 	@Inject
+	private ChatClient chatClient;
+
+	@Inject
 	private SlayerNavigatorConfig config;
 
 	@Inject
 	private ItemManager itemManager;
 
+	@Inject
+	private NpcOverlayService npcOverlayService;
+
+	//Fields
+	net.runelite.http.api.chat.Task currentTask;
+	private int totalTasksCompleted;
+	private int totalMonstersSlayed;
+	private List<NPC> targets = new ArrayList<>();
+	private ArrayList monsterIds;
+
+	private boolean taskCompletedConfirmed;
+
+
 	@Override
 	protected void startUp() throws Exception
+			// TODO: whenever a slayer task is finished, our statistics should be updated
+			// When sending data to our own server: https://github.com/runelite/plugin-hub/pull/2308/files#diff-c8736103d0c2e88bd584a8f286df6c92d90a9634b1af95802add104c22d78568R3
 	{
 		log.info("SlayerNavigator started!");
+
+		try
+		{
+			currentTask = getSlayerTask();
+		}
+		catch (IOException ex)
+		{
+			log.debug("Failed to lookup slayer task", ex);
+			// TODO: give message to user
+			return;
+		}
+
+
+		npcOverlayService.registerHighlighter(isTarget);
+//		TODO: fill in monsterIDs. query from db
+
 	}
+
+	// Adapted from SlayerPugin.java. This will mark the current monster of the current slayer task
+	public final Function<NPC, HighlightedNpc> isTarget = (n) ->
+	{
+
+		Color color = config.selectTagColor();
+		return HighlightedNpc.builder()
+				.npc(n)
+				.highlightColor(color)
+				.fillColor(ColorUtil.colorWithAlpha(color, color.getAlpha() / 12))
+				.hull(config.showTag())
+				.build();
+//		return null;
+	};
 
 	@Override
 	protected void shutDown() throws Exception
 	{
+		npcOverlayService.unregisterHighlighter(isTarget);
 		log.info("SlayerNavigator stopped!");
+	}
+
+	private Task getSlayerTask() throws IOException {
+		return chatClient.getTask(client.getLocalPlayer().getName());
+	}
+
+	private void drawGraphics(){ // or something to do with overlay
+
+		if (config.showAllTimeInfo()){
+			log.debug("TODO: Show all time info");
+			// use totalMonstersSlayed;
+			// use totalTasksCompleted;
+		}
+
+		if (taskCompletedConfirmed){
+			// Fetch preferred slayer master (or advised)
+			// Check if our completed slayer task count is an important one. If yes, noify the user and give the highest available slayer master
+			// hide taskInfoWidget
+			// show taskCompletedWidget
+
+			log.debug("TODO: Draw taskCompletedConfirmed");
+		}
+		// another else: we do currently not have a slayer task
+
+		else { // we are on a slayer task
+			// get image of monster task
+			// get number of monsters left:
+			int monstersLeft = currentTask.getAmount();
+
+		}
 	}
 
 	@Subscribe
@@ -62,11 +154,13 @@ public class SlayerNavigatorPlugin extends Plugin
 	{
 		if (ev.getContainerId() == InventoryID.BANK.getId())
 		{
+			log.info("Parsing bank items");
 			Item[] bankItems = getBankItems();
 			log.info(Arrays.toString(bankItems));
 			// now, mark them
 			for (Item i : bankItems){
 				if (i.getId() == 2355){
+					// TODO: maybe use WidgetItemOverlay?
 //					SpritePixels pixels = client.createItemSprite(i.getId(), 1, true, 1, 0, false, 1);
 //					pixels.drawAt();
 //					client.getItemSpriteCache();
@@ -79,7 +173,67 @@ public class SlayerNavigatorPlugin extends Plugin
 		}
 	}
 
+	@Subscribe
+	public void onNpcSpawned(NpcSpawned npcSpawned)
+	{
+		NPC npc = npcSpawned.getNpc();
+		if (isTargetMonster(npc))
+		{
+			targets.add(npc);
+		}
+	}
+
+	private boolean isTargetMonster(NPC npc) {
+		return monsterIds.contains(npc.getId());
+	}
+
+	@Subscribe
+	public void onNpcDespawned(NpcDespawned npcDespawned)
+	{
+		NPC monster = npcDespawned.getNpc();
+		if (isTargetMonster(monster)){
+			currentTask.setAmount(currentTask.getAmount() - 1);
+			totalMonstersSlayed += 1;
+			// graphic would be automatically updated as we should call currentTask.getAmount() there
+		}
+
+		if (currentTask.getAmount() == 0){
+
+
+			if (taskCompletedConfirmed){
+				totalTasksCompleted += 1;
+
+			}
+		}
+	}
+
+
 	private void tagSlayerTaskMonster(){
+		// To tag monsters: HighlightedNpc.java
+		// Use NpcOverlayService
+
+		// FROM SlayerPlugin.java:
+//		chatCommandManager.registerCommandAsync(TASK_COMMAND_STRING, this::taskLookup, this::taskSubmit);
+//		npcOverlayService.registerHighlighter(isTarget);
+
+
+
+
+
+
+		//EXAMPLE
+//		Color color = config.getTargetColor();
+//		return HighlightedNpc.builder()
+//				.npc(n)
+//				.highlightColor(color)
+//				.fillColor(ColorUtil.colorWithAlpha(color, color.getAlpha() / 12))
+//				.hull(config.highlightHull())
+//				.tile(config.highlightTile())
+//				.outline(config.highlightOutline())
+//				.build();
+//
+//	}
+
 //		https://static.runelite.net/api/runelite-api/net/runelite/api/Actor.html#getConvexHull()
 //		https://static.runelite.net/api/runelite-api/net/runelite/api/model/Jarvis.html
 	}
